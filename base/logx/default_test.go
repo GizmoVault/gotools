@@ -13,7 +13,7 @@ func TestConsoleLoggerWrapper(_ *testing.T) {
 }
 
 func TestFileLoggerWrapper(_ *testing.T) {
-	logger := NewFileLoggerWrapper("logs/file.log")
+	logger := NewFileLoggerWrapper("tmp/file.log")
 	logger.GetLogger().SetLevel(LevelWarn)
 
 	logger.Debug("a")
@@ -23,7 +23,7 @@ func TestFileLoggerWrapper(_ *testing.T) {
 }
 
 func TestFileLoggerWrapper2(_ *testing.T) {
-	logger := NewCommLoggerEx(true, NewFileRecorder("logs/file.log"))
+	logger := NewCommLoggerEx(true, NewFileRecorder("tmp/file.log"))
 	logger.SetLevel(LevelInfo)
 
 	lw := NewWrapper(logger)

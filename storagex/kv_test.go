@@ -14,9 +14,9 @@ type utKVItem struct {
 }
 
 func TestSimpleKV(t *testing.T) {
-	_ = os.Remove("ut.txt")
+	_ = os.Remove("tmp/ut.txt")
 
-	kv := storagex.NewKV("ut.txt")
+	kv := storagex.NewKV("tmp/ut.txt")
 
 	var item utKVItem
 
@@ -36,7 +36,7 @@ func TestSimpleKV(t *testing.T) {
 	assert.EqualValues(t, 10, item.N)
 	assert.EqualValues(t, "S20S", item.S)
 
-	kv2 := storagex.NewKV("ut.txt")
+	kv2 := storagex.NewKV("tmp/ut.txt")
 
 	ok, err = kv2.Get("key", &item)
 	assert.Nil(t, err)
@@ -46,9 +46,9 @@ func TestSimpleKV(t *testing.T) {
 }
 
 func TestSimpleKV2(t *testing.T) {
-	_ = os.Remove("ut.txt")
+	_ = os.Remove("tmp/ut.txt")
 
-	kv := storagex.NewKV("ut.txt")
+	kv := storagex.NewKV("tmp/ut.txt")
 
 	items, err := kv.GetAll([]string{"key", "key1"}, &utKVItem{})
 	assert.Nil(t, err)
@@ -74,7 +74,7 @@ func TestSimpleKV2(t *testing.T) {
 	assert.EqualValues(t, 20, items[1].(*utKVItem).N)
 	assert.EqualValues(t, "S20S", items[1].(*utKVItem).S)
 
-	kv2 := storagex.NewKV("ut.txt")
+	kv2 := storagex.NewKV("tmp/ut.txt")
 
 	items, err = kv2.GetAll([]string{"key", "key1", "key2"}, &utKVItem{}, &utKVItem{}, &utKVItem{})
 	assert.Nil(t, err)

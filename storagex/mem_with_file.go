@@ -1,11 +1,9 @@
 package storagex
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"time"
-
-	"github.com/GizmoVault/gotools/pathx"
 )
 
 type Serial interface {
@@ -123,20 +121,14 @@ func (mwf *MemWithFile[T, S, L]) load() error {
 		return nil
 	}
 
-	ok, err := pathx.IsFileExists(mwf.tmpFile())
-	if err == nil && ok {
-		_ = os.Rename(mwf.fileName, fmt.Sprintf("%s.r.%d", mwf.fileName, time.Now().UnixMilli()))
-
-		_ = os.Rename(mwf.tmpFile(), mwf.fileName)
-	}
-
 	if mwf.ob != nil {
 		mwf.ob.BeforeLoad()
 	}
 
 	d, err := mwf.storage.ReadFile(mwf.fileName)
 	if err != nil {
-		if _, ok := err.(*os.PathError); ok {
+		var pathError *os.PathError
+		if errors.As(err, &pathError) {
 			err = nil
 		}
 
@@ -167,10 +159,6 @@ func (mwf *MemWithFile[T, S, L]) load() error {
 	return nil
 }
 
-func (mwf *MemWithFile[T, S, L]) tmpFile() string {
-	return mwf.fileName + ".tmp"
-}
-
 func (mwf *MemWithFile[T, S, L]) save() error {
 	if mwf.fileName == "" {
 		return nil
@@ -189,30 +177,14 @@ func (mwf *MemWithFile[T, S, L]) save() error {
 		return err
 	}
 
-	ok, err := pathx.IsFileExists(mwf.fileName)
-	if err == nil && ok {
-		err = os.Rename(mwf.fileName, mwf.tmpFile())
-		if err != nil {
-			if mwf.ob != nil {
-				mwf.ob.AfterSave(mwf.memD, err)
-			}
-
-			return err
-		}
-	}
-
 	err = mwf.storage.WriteFile(mwf.fileName, d)
 	if err != nil {
-		_ = os.Rename(mwf.tmpFile(), mwf.fileName)
-
 		if mwf.ob != nil {
 			mwf.ob.AfterSave(mwf.memD, err)
 		}
 
 		return err
 	}
-
-	_ = os.Remove(mwf.tmpFile())
 
 	if mwf.ob != nil {
 		mwf.ob.AfterSave(mwf.memD, nil)
