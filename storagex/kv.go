@@ -2,6 +2,7 @@ package storagex
 
 import (
 	"encoding/json"
+	"github.com/GizmoVault/gotools/base/syncx"
 	"sync"
 
 	"github.com/GizmoVault/gotools/base/commerrx"
@@ -13,12 +14,12 @@ func NewKV(file string) StorageTiny2 {
 
 func NewKVEx(file string, storage FileStorage) StorageTiny2 {
 	return &kvImpl{
-		d: NewMemWithFile[map[string]string, Serial, Lock](make(map[string]string), &JSONSerial{}, &sync.RWMutex{}, file, storage),
+		d: NewMemWithFile[map[string]string, Serial, syncx.RWLocker](make(map[string]string), &JSONSerial{}, &sync.RWMutex{}, file, storage),
 	}
 }
 
 type kvImpl struct {
-	d *MemWithFile[map[string]string, Serial, Lock]
+	d *MemWithFile[map[string]string, Serial, syncx.RWLocker]
 }
 
 func (impl *kvImpl) GetList(itemGen func(key string) interface{}) (items []interface{}, err error) {

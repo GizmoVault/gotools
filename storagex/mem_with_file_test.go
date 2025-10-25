@@ -1,6 +1,7 @@
 package storagex_test
 
 import (
+	"github.com/GizmoVault/gotools/base/syncx"
 	"testing"
 
 	"github.com/GizmoVault/gotools/storagex"
@@ -8,7 +9,7 @@ import (
 )
 
 func TestMemAndFile1(t *testing.T) {
-	mm := storagex.NewMemWithFile[map[int]string, storagex.Serial, storagex.Lock](make(map[int]string),
+	mm := storagex.NewMemWithFile[map[int]string, storagex.Serial, syncx.RWLocker](make(map[int]string),
 		&storagex.JSONSerial{}, &storagex.NoLock{}, "tmp/utStorage.txt", nil)
 	t.Log(mm)
 

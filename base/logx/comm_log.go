@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/GizmoVault/gotools/base"
 )
 
 type Recorder interface {
@@ -12,14 +14,16 @@ type Recorder interface {
 }
 
 type CommLogger struct {
+	now        base.FNNow
 	level      Level
 	fields     []Field
 	recordTime bool
 	recorder   []Recorder
 }
 
-func NewCommLogger(recorder ...Recorder) Logger {
+func NewCommLogger(now base.FNNow, recorder ...Recorder) Logger {
 	return &CommLogger{
+		now:        now,
 		level:      LevelInfo,
 		fields:     nil,
 		recordTime: true,
@@ -44,6 +48,7 @@ func (l *CommLogger) AddRecorder(recorder ...Recorder) Logger {
 
 func (l *CommLogger) clone() *CommLogger {
 	newLogger := &CommLogger{}
+	newLogger.now = l.now
 	newLogger.level = l.level
 	newLogger.fields = append(newLogger.fields, l.fields...)
 	newLogger.recorder = l.recorder
@@ -131,7 +136,7 @@ func (l *CommLogger) Log(level Level, a ...interface{}) {
 	vs := make([]interface{}, 0, len(l.fields)+len(a)+1)
 
 	if l.recordTime {
-		vs = append(vs, time.Now().Format(time.RFC3339))
+		vs = append(vs, base.GetNow(l.now).Format(time.RFC3339))
 	}
 
 	vs = append(vs, l.mapFields(l.fields...))
@@ -154,7 +159,7 @@ func (l *CommLogger) Logf(level Level, format string, a ...interface{}) {
 	tag := l.mapFields(l.fields...)
 
 	if l.recordTime {
-		tag = time.Now().Format(time.RFC3339) + " " + tag
+		tag = base.GetNow(l.now).Format(time.RFC3339) + " " + tag
 	}
 
 	for _, recorder := range l.recorder {

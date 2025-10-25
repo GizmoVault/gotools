@@ -4,19 +4,15 @@ import (
 	"errors"
 	"os"
 	"time"
+
+	"github.com/GizmoVault/gotools/base/syncx"
 )
+
+type Lock syncx.RWLocker
 
 type Serial interface {
 	Marshal(t any) ([]byte, error)
 	Unmarshal(d []byte, t any) error
-}
-
-type Lock interface {
-	RLock()
-	RUnlock()
-
-	Lock()
-	Unlock()
 }
 
 type EventObserver[T any] interface {
@@ -26,7 +22,7 @@ type EventObserver[T any] interface {
 	AfterSave(memD T, err error)
 }
 
-type MemWithFile[T any, S Serial, L Lock] struct {
+type MemWithFile[T any, S Serial, L syncx.RWLocker] struct {
 	memD   T
 	serial S
 	lock   L
@@ -39,16 +35,16 @@ type MemWithFile[T any, S Serial, L Lock] struct {
 	autoSaveInterval time.Duration
 }
 
-func NewMemWithFile[T any, S Serial, L Lock](d T, serial S, lock L, fileName string, storage FileStorage) *MemWithFile[T, S, L] {
+func NewMemWithFile[T any, S Serial, L syncx.RWLocker](d T, serial S, lock L, fileName string, storage FileStorage) *MemWithFile[T, S, L] {
 	return NewMemWithFileEx(d, serial, lock, fileName, storage, nil)
 }
 
-func NewMemWithFileEx[T any, S Serial, L Lock](d T, serial S, lock L, fileName string, storage FileStorage,
+func NewMemWithFileEx[T any, S Serial, L syncx.RWLocker](d T, serial S, lock L, fileName string, storage FileStorage,
 	ob EventObserver[T]) *MemWithFile[T, S, L] {
 	return NewMemWithFileEx1(d, serial, lock, fileName, storage, ob, 0)
 }
 
-func NewMemWithFileEx1[T any, S Serial, L Lock](d T, serial S, lock L, fileName string, storage FileStorage,
+func NewMemWithFileEx1[T any, S Serial, L syncx.RWLocker](d T, serial S, lock L, fileName string, storage FileStorage,
 	ob EventObserver[T], autoSaveInterval time.Duration) *MemWithFile[T, S, L] {
 	if storage == nil && fileName != "" {
 		storage = NewRawFSStorage("")
