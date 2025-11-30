@@ -2,20 +2,26 @@ package storagex
 
 import (
 	"encoding/json"
-	"github.com/GizmoVault/gotools/base/syncx"
 	"sync"
 
-	"github.com/GizmoVault/gotools/base/commerrx"
+	"github.com/GizmoVault/gotools/base/errorx"
+	"github.com/GizmoVault/gotools/base/syncx"
 )
 
-func NewKV(file string) StorageTiny2 {
+func NewKV(file string) (StorageTiny2, error) {
 	return NewKVEx(file, nil)
 }
 
-func NewKVEx(file string, storage FileStorage) StorageTiny2 {
-	return &kvImpl{
-		d: NewMemWithFile[map[string]string, Serial, syncx.RWLocker](make(map[string]string), &JSONSerial{}, &sync.RWMutex{}, file, storage),
+func NewKVEx(file string, storage FileStorage) (StorageTiny2, error) {
+	stg, err := NewMemWithFile[map[string]string, Serial, syncx.RWLocker](make(map[string]string), &JSONSerial{},
+		&sync.RWMutex{}, file, storage)
+	if err != nil {
+		return nil, err
 	}
+
+	return &kvImpl{
+		d: stg,
+	}, nil
 }
 
 type kvImpl struct {
@@ -24,7 +30,7 @@ type kvImpl struct {
 
 func (impl *kvImpl) GetList(itemGen func(key string) interface{}) (items []interface{}, err error) {
 	if itemGen == nil {
-		err = commerrx.ErrInvalidArgument
+		err = errorx.ErrInvalidArgs
 
 		return
 	}
@@ -50,7 +56,7 @@ func (impl *kvImpl) GetList(itemGen func(key string) interface{}) (items []inter
 
 func (impl *kvImpl) GetMap(itemGen func(key string) interface{}) (items map[string]interface{}, err error) {
 	if itemGen == nil {
-		err = commerrx.ErrInvalidArgument
+		err = errorx.ErrInvalidArgs
 
 		return
 	}
@@ -97,7 +103,7 @@ func (impl *kvImpl) Del(key string) error {
 
 func (impl *kvImpl) SetAll(keys []string, vs ...interface{}) error {
 	if len(keys) != len(vs) {
-		return commerrx.ErrInvalidArgument
+		return errorx.ErrInvalidArgs
 	}
 
 	ds := make([][]byte, 0, len(keys))

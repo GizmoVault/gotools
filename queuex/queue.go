@@ -2,9 +2,10 @@ package queuex
 
 import (
 	"context"
+	"time"
+
 	"github.com/GizmoVault/gotools/storagex"
 	"github.com/google/uuid"
-	"time"
 )
 
 type Task struct {

@@ -2,12 +2,12 @@ package fs
 
 import (
 	"context"
-	"github.com/GizmoVault/gotools/base"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/GizmoVault/gotools/base/commerrx"
+	"github.com/GizmoVault/gotools/base"
+	"github.com/GizmoVault/gotools/base/errorx"
 	"github.com/GizmoVault/gotools/base/logx"
 	"github.com/GizmoVault/gotools/base/syncx"
 	"github.com/GizmoVault/gotools/queuex"
@@ -15,30 +15,38 @@ import (
 	"github.com/GizmoVault/gotools/storagex"
 )
 
-func NewFsQueue(ctx context.Context, fileName string, logger logx.Wrapper) queuex.Queue {
+func NewFsQueue(ctx context.Context, fileName string, logger logx.Wrapper) (queuex.Queue, error) {
 	return NewFsQueueWithFNNow(ctx, fileName, nil, logger)
 }
 
-func NewFsQueueWithFNNow(ctx context.Context, fileName string, now base.FNNow, logger logx.Wrapper) queuex.Queue {
+func NewFsQueueWithFNNow(ctx context.Context, fileName string, now base.FNNow, logger logx.Wrapper) (queuex.Queue, error) {
 	if logger == nil {
 		logger = logx.NewConsoleLoggerWrapper()
 	}
 
 	logger = logger.WithFields(logx.StringField(logx.ClsKey, "queueImpl"))
 
-	impl := &queueImpl{
-		logger: logger,
-		ctx:    ctx,
-		expiredStg: storagex.NewMemWithFile[map[string]*innerTask, storagex.Serial, syncx.RWLocker](
-			make(map[string]*innerTask), &storagex.JSONSerial{}, &sync.RWMutex{}, fileName+".expired", nil),
-		taskPool: schedulex.NewHeapTaskPool(now),
-		m:        make(map[string]queuex.Handler),
+	expiredStg, err := storagex.NewMemWithFile[map[string]*innerTask, storagex.Serial, syncx.RWLocker](
+		make(map[string]*innerTask), &storagex.JSONSerial{}, &sync.RWMutex{}, fileName+".expired", nil)
+	if err != nil {
+		return nil, err
 	}
 
-	impl.stg = storagex.NewMemWithFileEx[map[string]*innerTask, storagex.Serial, syncx.RWLocker](
-		make(map[string]*innerTask), &storagex.JSONSerial{}, &sync.RWMutex{}, fileName, nil, impl)
+	impl := &queueImpl{
+		logger:     logger,
+		ctx:        ctx,
+		expiredStg: expiredStg,
+		taskPool:   schedulex.NewHeapTaskPool(now),
+		m:          make(map[string]queuex.Handler),
+	}
 
-	return impl
+	impl.stg, err = storagex.NewMemWithFileEx[map[string]*innerTask, storagex.Serial, syncx.RWLocker](
+		make(map[string]*innerTask), &storagex.JSONSerial{}, &sync.RWMutex{}, fileName, nil, impl)
+	if err != nil {
+		return nil, err
+	}
+
+	return impl, nil
 }
 
 type queueImpl struct {
@@ -88,7 +96,7 @@ func (*queueImpl) AfterSave(_ map[string]*innerTask, _ error) {
 
 func (impl *queueImpl) Enqueue(task *queuex.Task, delay time.Duration) error {
 	if task == nil || task.ID == "" {
-		return commerrx.ErrInvalidArgument
+		return errorx.ErrInvalidArgs
 	}
 
 	var at int64
@@ -101,7 +109,7 @@ func (impl *queueImpl) Enqueue(task *queuex.Task, delay time.Duration) error {
 		}
 
 		if _, ok := newM[task.ID]; ok {
-			err = commerrx.ErrAlreadyExists
+			err = errorx.ErrExists
 
 			return
 		}
@@ -159,7 +167,7 @@ func (impl *queueImpl) HandleFunc(key string, h queuex.Handler) {
 			_ = impl.expiredStg.Change(func(oldM map[string]*innerTask) (newM map[string]*innerTask, err error) {
 				newM = oldM
 				if len(newM) == 0 {
-					err = commerrx.ErrAborted
+					err = errorx.ErrSkip
 
 					return
 				}

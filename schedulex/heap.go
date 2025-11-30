@@ -6,18 +6,20 @@ import (
 	"time"
 
 	"github.com/GizmoVault/gotools/base"
-	"github.com/GizmoVault/gotools/base/commerrx"
+	"github.com/GizmoVault/gotools/base/errorx"
 	"github.com/google/uuid"
 )
 
+type OpType int
+
 const (
-	taskOpAdd = iota
+	taskOpAdd OpType = iota
 	taskOpDel
 	taskOpUpdate
 )
 
 type taskOpInfo struct {
-	opType int
+	opType OpType
 	key    string
 	at     time.Time
 	exec   TaskFunc
@@ -30,6 +32,7 @@ type taskItem struct {
 	params   []any
 	canceled bool
 	key      string
+	version  string
 }
 
 type taskHeap []*taskItem
@@ -72,7 +75,9 @@ func NewHeapTaskPool(now base.FNNow) *HeapTaskPool {
 	pool := &HeapTaskPool{
 		fnNow: now,
 	}
+
 	pool.Start()
+
 	return pool
 }
 
@@ -87,7 +92,12 @@ func (tp *HeapTaskPool) Start() {
 	heap.Init(tp.tasks)
 
 	tp.Add(1)
-	go tp.loop()
+
+	go func() {
+		defer tp.Done()
+
+		tp.loop()
+	}()
 }
 
 func (tp *HeapTaskPool) Stop() {
@@ -129,9 +139,11 @@ func (tp *HeapTaskPool) process() time.Duration {
 
 		heap.Pop(tp.tasks)
 
-		delete(tp.keys, t.key)
+		if d, ok := tp.keys[t.key]; ok && d.version == t.version {
+			delete(tp.keys, t.key)
 
-		execTask(t.key, t.exec, t.params)
+			execTask(t.key, t.exec, t.params)
+		}
 	}
 }
 
@@ -143,10 +155,11 @@ func (tp *HeapTaskPool) addOrUpdateTask(t time.Time, key string, exec TaskFunc, 
 	}
 
 	ti := &taskItem{
-		at:     t,
-		exec:   exec,
-		params: params,
-		key:    key,
+		at:      t,
+		exec:    exec,
+		params:  params,
+		key:     key,
+		version: uuid.NewString(),
 	}
 
 	tp.keys[key] = ti
@@ -161,8 +174,6 @@ func (tp *HeapTaskPool) cancelTask(key string) {
 }
 
 func (tp *HeapTaskPool) loop() {
-	defer tp.Done()
-
 	nextTaskInterval := time.Second
 
 	for {
@@ -186,7 +197,7 @@ func (tp *HeapTaskPool) loop() {
 
 func (tp *HeapTaskPool) AddTask(key string, t time.Time, exec TaskFunc, params ...interface{}) error {
 	if exec == nil {
-		return commerrx.ErrInvalidArgument
+		return errorx.ErrInvalidArgs
 	}
 
 	tp.taskOp <- &taskOpInfo{
@@ -202,7 +213,7 @@ func (tp *HeapTaskPool) AddTask(key string, t time.Time, exec TaskFunc, params .
 
 func (tp *HeapTaskPool) RemoveTask(key string) error {
 	if key == "" {
-		return commerrx.ErrInvalidArgument
+		return errorx.ErrInvalidArgs
 	}
 
 	tp.taskOp <- &taskOpInfo{

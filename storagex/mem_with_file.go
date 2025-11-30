@@ -2,6 +2,7 @@ package storagex
 
 import (
 	"errors"
+	"github.com/GizmoVault/gotools/base/errorx"
 	"os"
 	"time"
 
@@ -35,17 +36,18 @@ type MemWithFile[T any, S Serial, L syncx.RWLocker] struct {
 	autoSaveInterval time.Duration
 }
 
-func NewMemWithFile[T any, S Serial, L syncx.RWLocker](d T, serial S, lock L, fileName string, storage FileStorage) *MemWithFile[T, S, L] {
+func NewMemWithFile[T any, S Serial, L syncx.RWLocker](d T, serial S, lock L, fileName string, storage FileStorage) (
+	*MemWithFile[T, S, L], error) {
 	return NewMemWithFileEx(d, serial, lock, fileName, storage, nil)
 }
 
 func NewMemWithFileEx[T any, S Serial, L syncx.RWLocker](d T, serial S, lock L, fileName string, storage FileStorage,
-	ob EventObserver[T]) *MemWithFile[T, S, L] {
+	ob EventObserver[T]) (*MemWithFile[T, S, L], error) {
 	return NewMemWithFileEx1(d, serial, lock, fileName, storage, ob, 0)
 }
 
 func NewMemWithFileEx1[T any, S Serial, L syncx.RWLocker](d T, serial S, lock L, fileName string, storage FileStorage,
-	ob EventObserver[T], autoSaveInterval time.Duration) *MemWithFile[T, S, L] {
+	ob EventObserver[T], autoSaveInterval time.Duration) (*MemWithFile[T, S, L], error) {
 	if storage == nil && fileName != "" {
 		storage = NewRawFSStorage("")
 	}
@@ -60,13 +62,13 @@ func NewMemWithFileEx1[T any, S Serial, L syncx.RWLocker](d T, serial S, lock L,
 		autoSaveInterval: autoSaveInterval,
 	}
 
-	_ = mwf.load()
+	err := mwf.load()
 
 	if autoSaveInterval > 0 {
 		go mwf.autoSaveRoutine()
 	}
 
-	return mwf
+	return mwf, err
 }
 
 func (mwf *MemWithFile[T, S, L]) autoSaveRoutine() {
@@ -98,6 +100,10 @@ func (mwf *MemWithFile[T, S, L]) Change(proc func(memD T) (newMemD T, err error)
 
 	newMemD, err := proc(mwf.memD)
 	if err != nil {
+		if errors.Is(err, errorx.NoErrSkip) {
+			err = nil
+		}
+
 		return err
 	}
 

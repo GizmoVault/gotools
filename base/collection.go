@@ -1,9 +1,9 @@
 package base
 
 import (
+	"github.com/GizmoVault/gotools/base/errorx"
 	"reflect"
 
-	"github.com/GizmoVault/gotools/base/commerrx"
 	"github.com/GizmoVault/gotools/base/syncx"
 )
 
@@ -25,19 +25,19 @@ func NewCollection[T Entity, L syncx.RWLocker](l L) *Collection[T, L] {
 
 func (c *Collection[T, L]) Add(item T) error {
 	if reflect.ValueOf(item).IsNil() { // 第25行
-		return commerrx.ErrInvalidArgument
+		return errorx.ErrInvalidArgs
 	}
 
 	id := item.GetID()
 	if id == 0 {
-		return commerrx.ErrInvalidArgument
+		return errorx.ErrInvalidArgs
 	}
 
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	if _, exists := c.items[id]; exists {
-		return commerrx.ErrAlreadyExists
+		return errorx.ErrExists
 	}
 
 	c.items[id] = item
@@ -46,8 +46,8 @@ func (c *Collection[T, L]) Add(item T) error {
 }
 
 func (c *Collection[T, L]) Remove(item T) error {
-	if reflect.ValueOf(item).IsNil() { // 第25行
-		return commerrx.ErrInvalidArgument
+	if reflect.ValueOf(item).IsNil() {
+		return errorx.ErrNotExists
 	}
 
 	return c.RemoveByID(item.GetID())
@@ -55,14 +55,14 @@ func (c *Collection[T, L]) Remove(item T) error {
 
 func (c *Collection[T, L]) RemoveByID(id uint64) error {
 	if id == 0 {
-		return commerrx.ErrInvalidArgument
+		return errorx.ErrNotExists
 	}
 
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	if _, exists := c.items[id]; !exists {
-		return commerrx.ErrNotFound
+		return errorx.ErrNotExists
 	}
 
 	delete(c.items, id)
@@ -104,7 +104,7 @@ func (c *Collection[T, L]) GetItems() []T {
 
 func (c *Collection[T, L]) Walk(callback func(T) error) (err error) {
 	if callback == nil {
-		return commerrx.ErrInvalidArgument
+		return errorx.ErrInvalidArgs
 	}
 
 	for _, item := range c.GetItems() {

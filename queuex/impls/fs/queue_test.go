@@ -15,14 +15,15 @@ import (
 func TestQueue(t *testing.T) {
 	_ = os.RemoveAll("tmp")
 
-	queue := NewFsQueue(t.Context(), "tmp/ut_queue.dat", logx.NewConsoleLoggerWrapper())
+	queue, err := NewFsQueue(t.Context(), "tmp/ut_queue.dat", logx.NewConsoleLoggerWrapper())
+	assert.NoError(t, err)
 
 	queue.HandleFunc("email:user", func(_ context.Context, task *queuex.Task) {
 		t.Log(time.Now(), "email:user callback", "task.id", task.ID, "task.key", task.Key, "task.payload", task.Payload)
 	})
 
 	t.Log(time.Now(), "start enqueue")
-	err := queue.Enqueue(&queuex.Task{
+	err = queue.Enqueue(&queuex.Task{
 		ID:      uuid.NewString(),
 		Key:     "email:user",
 		Payload: []byte{1, 2, 3},
@@ -55,7 +56,8 @@ func TestQueue(t *testing.T) {
 }
 
 func TestQueue2(t *testing.T) {
-	queue := NewFsQueue(t.Context(), "tmp/ut_queue.dat", logx.NewConsoleLoggerWrapper())
+	queue, err := NewFsQueue(t.Context(), "tmp/ut_queue.dat", logx.NewConsoleLoggerWrapper())
+	assert.NoError(t, err)
 
 	queue.HandleFunc("email:vip", func(_ context.Context, task *queuex.Task) {
 		t.Log(time.Now(), "email:vip callback", "task.id", task.ID, "task.key", task.Key, "task.payload", task.Payload)
