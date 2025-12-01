@@ -55,6 +55,19 @@ func FromError(err error) CodeError {
 	return New(CodeErrInternal).WithCause(err)
 }
 
+func FromErrorAndMessage(err error, msg string) CodeError {
+	if err == nil {
+		return New(CodeSuccess)
+	}
+
+	var ce CodeError
+	if errors.As(err, &ce) {
+		return ce
+	}
+
+	return New(CodeErrInternal).WithCause(err).WithMsg(msg)
+}
+
 // --- Chainable builders ---
 
 // WithCause returns a copy with the given underlying error.

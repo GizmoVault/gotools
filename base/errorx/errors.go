@@ -23,4 +23,6 @@ var (
 	ErrResourceExhausted = New(CodeErrResourceExhausted)
 	ErrPartSuccess       = New(CodeErrPartSuccess)
 	ErrUnimplemented     = New(CodeErrUnimplemented)
+	ErrCrashed           = New(CodeErrCrashed)
+	ErrOverflow          = New(CodeErrOverflow)
 )

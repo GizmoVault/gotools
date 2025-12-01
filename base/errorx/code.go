@@ -42,6 +42,10 @@ const (
 	CodeErrPartSuccess // Operation partially succeeded
 
 	CodeErrUnimplemented // Feature not implemented
+
+	CodeErrCrashed
+	CodeErrOverflow
+
 	//
 	// Custom code range (user-defined)
 	//
@@ -92,6 +96,10 @@ func (c Code) Key() string {
 		return "partial success"
 	case CodeErrUnimplemented:
 		return "not implemented"
+	case CodeErrCrashed:
+		return "crashed"
+	case CodeErrOverflow:
+		return "overflow"
 	default:
 		return ""
 	}
