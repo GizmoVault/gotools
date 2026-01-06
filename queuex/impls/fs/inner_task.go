@@ -19,7 +19,6 @@ func (it *innerTask) GetTask() *queuex.Task {
 	}
 
 	task := &queuex.Task{
-		ID:  it.ID,
 		Key: it.Key,
 	}
 
@@ -31,14 +30,14 @@ func (it *innerTask) GetTask() *queuex.Task {
 	return task
 }
 
-func fromTask(task *queuex.Task, delay time.Duration) *innerTask {
+func fromTask(id string, task *queuex.Task, delay time.Duration) *innerTask {
 	at := time.Now()
 	if delay > 0 {
 		at = at.Add(delay)
 	}
 
 	newTask := &innerTask{
-		ID:  task.ID,
+		ID:  id,
 		Key: task.Key,
 		At:  at.Unix(),
 	}

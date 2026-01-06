@@ -3,6 +3,7 @@ package configx
 import (
 	"os"
 	"path"
+	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 )
@@ -29,6 +30,11 @@ func LoadOnConfigPath(configName string, configPaths []string, cfg interface{}) 
 	allConfigPaths := make([]string, 0, len(configPaths)+len(defaultConfigPaths))
 	allConfigPaths = append(allConfigPaths, configPaths...)
 	allConfigPaths = append(allConfigPaths, defaultConfigPaths...)
+	for _, configPath := range configPaths {
+		for _, defaultConfigPath := range defaultConfigPaths {
+			allConfigPaths = append(allConfigPaths, filepath.Join(filepath.Dir(defaultConfigPath), configPath))
+		}
+	}
 
 	for _, configPath := range configPaths {
 		if path.IsAbs(configPath) {

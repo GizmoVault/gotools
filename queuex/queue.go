@@ -2,21 +2,19 @@ package queuex
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/GizmoVault/gotools/storagex"
-	"github.com/google/uuid"
 )
 
 type Task struct {
-	ID      string
 	Key     string
 	Payload []byte
 }
 
 func MarshalTask[S storagex.Serial](key string, s storagex.Serial, d any) *Task {
 	task := &Task{
-		ID:      uuid.NewString(),
 		Key:     key,
 		Payload: nil,
 	}
@@ -34,13 +32,17 @@ func UnMarshalTaskPayload[S storagex.Serial](s storagex.Serial, payload []byte, 
 }
 
 type ProducerQueue interface {
-	Enqueue(task *Task, delay time.Duration) error
+	Enqueue(task *Task, delay time.Duration) (id string, err error)
 }
 
-type Handler func(ctx context.Context, task *Task)
+var ErrorSkipRetry error = errors.New("skip retry")
+
+type Handler func(ctx context.Context, id string, task *Task) error
 
 type ConsumerQueue interface {
 	HandleFunc(key string, h Handler)
+
+	Run() error
 }
 
 type Queue interface {

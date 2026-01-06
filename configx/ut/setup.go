@@ -4,13 +4,19 @@ import (
 	"testing"
 
 	"github.com/GizmoVault/gotools/configx"
+	"github.com/redis/go-redis/v9"
+	"github.com/stretchr/testify/require"
+)
+
+type Flag int
+
+const (
+	FlagMySQL Flag = 1 << iota
+	FlagRedis
 )
 
 const (
 	defaultUTConfig = "ut.yaml"
-
-	CfgItemRedis = 0x01
-	CfgItemMySQL = 0x02
 )
 
 func SetupUTConfig() *Config {
@@ -35,11 +41,11 @@ func SetupUTConfigEx(fileName string, configPaths []string) *Config {
 	return cfg
 }
 
-func SetupAndCheckUTConfig(checkItems int, t *testing.T) *Config {
-	return SetupAndCheckUTConfigGetEx(defaultUTConfig, nil, checkItems, t)
+func SetupAndCheckFlags(t *testing.T, flags Flag) *Config {
+	return SetupAndCheckFlagsEx(t, defaultUTConfig, nil, flags)
 }
 
-func SetupAndCheckUTConfigGetEx(fileName string, configPaths []string, checkItems int, t *testing.T) *Config {
+func SetupAndCheckFlagsEx(t *testing.T, fileName string, configPaths []string, flags Flag) *Config {
 	cfg := SetupUTConfigEx(fileName, configPaths)
 	if cfg == nil {
 		t.SkipNow()
@@ -47,15 +53,20 @@ func SetupAndCheckUTConfigGetEx(fileName string, configPaths []string, checkItem
 		return nil
 	}
 
-	if checkItems&CfgItemRedis == CfgItemRedis {
+	if flags&FlagRedis == FlagRedis {
 		if cfg.RedisDSN == "" {
 			t.SkipNow()
 
 			return nil
 		}
+
+		options, err := redis.ParseURL(cfg.RedisDSN)
+		require.NoError(t, err)
+
+		cfg.RedisOpt = options
 	}
 
-	if checkItems&CfgItemMySQL == CfgItemMySQL {
+	if flags&FlagMySQL == FlagMySQL {
 		if cfg.MysqlDSN == "" {
 			t.SkipNow()
 

@@ -1,30 +1,41 @@
-package fs
+package asynqx
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
-	"github.com/GizmoVault/gotools/base/logx"
 	"github.com/GizmoVault/gotools/queuex"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestQueue(t *testing.T) {
-	_ = os.RemoveAll("tmp")
+	t.SkipNow()
 
-	queue, err := NewFsQueue(t.Context(), "tmp/ut_queue.dat", logx.NewConsoleLoggerWrapper())
+	queue, err := NewProducerQueue(RedisClientOpt{
+		Addr:     "192.168.31.11:6379",
+		Password: "repass",
+		DB:       1,
+	})
 	assert.NoError(t, err)
 
-	queue.HandleFunc("email:user", func(_ context.Context, id string, task *queuex.Task) error {
-		t.Log(time.Now(), "email:user callback", "task.id", id, "task.key", task.Key, "task.payload", task.Payload)
-
-		return nil
-	})
+	time.Sleep(1 * time.Second)
 
 	go func() {
-		_ = queue.Run()
+		consumeQueue, e := NewConsumerQueue(RedisClientOpt{
+			Addr:     "192.168.31.11:6379",
+			Password: "repass",
+			DB:       1,
+		})
+		assert.NoError(t, e)
+
+		consumeQueue.HandleFunc("email:user", func(_ context.Context, id string, task *queuex.Task) error {
+			t.Log(time.Now(), "email:user callback", "task.id", id, "task.key", task.Key, "task.payload", task.Payload)
+
+			return nil
+		})
+
+		_ = consumeQueue.Run()
 	}()
 
 	t.Log(time.Now(), "start enqueue")
@@ -57,22 +68,26 @@ func TestQueue(t *testing.T) {
 	t.Log(time.Now(), "end enqueue")
 	t.Log("start enqueue", id4)
 
-	time.Sleep(time.Second * 3)
+	time.Sleep(time.Second * 1000)
 }
 
 func TestQueue2(t *testing.T) {
-	queue, err := NewFsQueue(t.Context(), "tmp/ut_queue.dat", logx.NewConsoleLoggerWrapper())
+	t.SkipNow()
+
+	consumeQueue, err := NewConsumerQueue(RedisClientOpt{
+		Addr:     "192.168.31.11:6379",
+		Password: "repass",
+		DB:       1,
+	})
 	assert.NoError(t, err)
 
-	queue.HandleFunc("email:vip", func(_ context.Context, id string, task *queuex.Task) error {
+	consumeQueue.HandleFunc("email:vip", func(_ context.Context, id string, task *queuex.Task) error {
 		t.Log(time.Now(), "email:vip callback", "task.id", id, "task.key", task.Key, "task.payload", task.Payload)
 
 		return nil
 	})
 
-	go func() {
-		_ = queue.Run()
-	}()
+	_ = consumeQueue.Run()
 
 	time.Sleep(time.Second * 10)
 }

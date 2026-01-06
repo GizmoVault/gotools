@@ -13,6 +13,7 @@ import (
 	"github.com/GizmoVault/gotools/queuex"
 	"github.com/GizmoVault/gotools/schedulex"
 	"github.com/GizmoVault/gotools/storagex"
+	"github.com/google/uuid"
 )
 
 func NewFsQueue(ctx context.Context, fileName string, logger logx.Wrapper) (queuex.Queue, error) {
@@ -60,6 +61,12 @@ type queueImpl struct {
 	m     map[string]queuex.Handler
 }
 
+func (*queueImpl) Run() error {
+	<-make(chan any)
+
+	return errorx.ErrLogic
+}
+
 func (impl *queueImpl) Stop() {
 	impl.taskPool.Stop()
 }
@@ -94,38 +101,44 @@ func (*queueImpl) AfterSave(_ map[string]*innerTask, _ error) {
 //
 //
 
-func (impl *queueImpl) Enqueue(task *queuex.Task, delay time.Duration) error {
-	if task == nil || task.ID == "" {
-		return errorx.ErrInvalidArgs
+func (impl *queueImpl) Enqueue(task *queuex.Task, delay time.Duration) (id string, err error) {
+	if task == nil || task.Key == "" {
+		err = errorx.ErrInvalidArgs
+
+		return
 	}
+
+	id = uuid.NewString()
 
 	var at int64
 
-	err := impl.stg.Change(func(oldM map[string]*innerTask) (newM map[string]*innerTask, err error) {
+	err = impl.stg.Change(func(oldM map[string]*innerTask) (newM map[string]*innerTask, err error) {
 		newM = oldM
 
 		if len(newM) == 0 {
 			newM = make(map[string]*innerTask)
 		}
 
-		if _, ok := newM[task.ID]; ok {
+		if _, ok := newM[id]; ok {
 			err = errorx.ErrExists
 
 			return
 		}
 
-		newM[task.ID] = fromTask(task, delay)
+		newM[id] = fromTask(id, task, delay)
 
-		at = newM[task.ID].At
+		at = newM[id].At
 
 		return
 	})
 
 	if err != nil {
-		return err
+		return
 	}
 
-	return impl.taskPool.AddTask(task.ID, time.Unix(at, 0), impl.taskCallback)
+	err = impl.taskPool.AddTask(id, time.Unix(at, 0), impl.taskCallback)
+
+	return
 }
 
 func (impl *queueImpl) HandleFunc(key string, h queuex.Handler) {
@@ -162,7 +175,7 @@ func (impl *queueImpl) HandleFunc(key string, h queuex.Handler) {
 				break
 			}
 
-			h(impl.ctx, task.GetTask())
+			_ = h(impl.ctx, task.ID, task.GetTask())
 
 			_ = impl.expiredStg.Change(func(oldM map[string]*innerTask) (newM map[string]*innerTask, err error) {
 				newM = oldM
@@ -227,7 +240,7 @@ func (impl *queueImpl) taskCallback(key string, _ ...any) {
 			return
 		})
 	} else {
-		h(impl.ctx, task.GetTask())
+		_ = h(impl.ctx, task.ID, task.GetTask())
 	}
 
 	_ = impl.stg.Change(func(oldM map[string]*innerTask) (newM map[string]*innerTask, err error) {
