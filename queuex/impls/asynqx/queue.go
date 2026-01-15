@@ -117,6 +117,12 @@ func (impl *serverQueueImpl) HandleFunc(key string, h queuex.Handler) {
 			err = asynq.SkipRetry
 		}
 
+		if err != nil {
+			_, _ = task.ResultWriter().Write([]byte(err.Error()))
+		} else {
+			_, _ = task.ResultWriter().Write([]byte(""))
+		}
+
 		return err
 	})
 }
