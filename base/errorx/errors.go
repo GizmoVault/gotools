@@ -25,4 +25,5 @@ var (
 	ErrUnimplemented     = New(CodeErrUnimplemented)
 	ErrCrashed           = New(CodeErrCrashed)
 	ErrOverflow          = New(CodeErrOverflow)
+	ErrTimeout           = New(CodeErrTimeout)
 )

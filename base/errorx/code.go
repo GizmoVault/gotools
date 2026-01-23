@@ -45,6 +45,7 @@ const (
 
 	CodeErrCrashed
 	CodeErrOverflow
+	CodeErrTimeout
 
 	//
 	// Custom code range (user-defined)
@@ -100,6 +101,8 @@ func (c Code) Key() string {
 		return "crashed"
 	case CodeErrOverflow:
 		return "overflow"
+	case CodeErrTimeout:
+		return "timeout"
 	default:
 		return ""
 	}
