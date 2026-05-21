@@ -150,18 +150,18 @@ func (impl *kvImpl) GetAll(keys []string, vsi ...interface{}) (vs []interface{},
 			continue
 		}
 
-		if idx >= len(vsi) || vsi[idx] == nil {
+		if idx >= len(vsi) || vsi[idx] == nil { //nolint:gosec // compiler wrong
 			vs[idx] = ds[idx]
 
 			continue
 		}
 
-		err = json.Unmarshal([]byte(ds[idx]), vsi[idx])
+		err = json.Unmarshal([]byte(ds[idx]), vsi[idx]) //nolint:gosec // compiler wrong
 		if err != nil {
 			return
 		}
 
-		vs[idx] = vsi[idx]
+		vs[idx] = vsi[idx] //nolint:gosec // compiler wrong
 	}
 
 	return

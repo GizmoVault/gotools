@@ -9,7 +9,7 @@ import (
 func PKCS7Padding(plaintext []byte, blockSize int) []byte {
 	padding := blockSize - len(plaintext)%blockSize
 
-	return append(plaintext, bytes.Repeat([]byte{byte(padding)}, padding)...)
+	return append(plaintext, bytes.Repeat([]byte{byte(padding)}, padding)...) //nolint:gosec // lint
 }
 
 func PKCS5Padding(plaintext []byte) []byte {

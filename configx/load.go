@@ -8,8 +8,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func fileExist(path string) bool {
-	_, err := os.Lstat(path)
+func fileExist(fp string) bool {
+	_, err := os.Lstat(fp)
 
 	return !os.IsNotExist(err)
 }

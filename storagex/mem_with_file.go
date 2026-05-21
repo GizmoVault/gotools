@@ -2,10 +2,10 @@ package storagex
 
 import (
 	"errors"
-	"github.com/GizmoVault/gotools/base/errorx"
 	"os"
 	"time"
 
+	"github.com/GizmoVault/gotools/base/errorx"
 	"github.com/GizmoVault/gotools/base/syncx"
 )
 
